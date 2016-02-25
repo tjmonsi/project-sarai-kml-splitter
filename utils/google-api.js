@@ -81,7 +81,7 @@ module.exports = {
             }, 10000);
           } else {
             console.log(err);
-            fs.writeFileSync(`log-${tableId}-${filesToUpload.length}-error.csv`, obj, 'utf8');
+            fs.writeFileSync(`log-${tableId}-${filesToUpload.length}-error.csv`, obj,csv, 'utf8');
             next(err);
           }
         } else {
