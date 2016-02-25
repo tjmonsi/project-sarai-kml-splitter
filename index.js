@@ -115,24 +115,38 @@ const makeCSV = (original) => {
   
   const wholeData = [];
   
-  for (var j in polygons) {
+  console.log(polygons.length);
+  
+  // for (var j in polygons) {
     
-    var polygon = xmlSimpleCreator(polygons[j], 0);
-    var list = [];
-    for (var k in data) {
-      list.push(data[k]);
-    }
-    list.push(polygon);
-    wholeData.push(list);
-  }
+  //   var polygon = xmlSimpleCreator(polygons[j], 0);
+  //   var list = [];
+  //   for (var k in data) {
+  //     list.push(data[k]);
+  //   }
+  //   list.push(filename.split('.')[0].split(' ')[0]);
+  //   list.push(polygon);
+    
+  //   wholeData.push(list);
+  // }
   
-  // console.log(wholeData[0]);
+  // const headers = [];
   
-  csvStringify(wholeData, (err, output) => {
-    if (err) throw err;
-    // console.log(output);
-    fs.writeFileSync(`output/${filename}.csv`, output, 'utf8');
-  })
+  // for (var k in data) {
+  //   headers.push(k);
+  // }
+  
+  // headers.push('crop');
+  // headers.push('locations');
+  
+  
+  // // console.log(wholeData[0]);
+  
+  // csvStringify(wholeData, {columns: headers, header: true}, (err, output) => {
+  //   if (err) throw err;
+  //   // console.log(output);
+  //   fs.writeFileSync(`output/${filename}.csv`, output, 'utf8');
+  // })
 }
 
 makeCSV(obj.root);
