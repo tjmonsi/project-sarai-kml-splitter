@@ -26,7 +26,7 @@ const getAccessToken = (oauth2Client, callback) => {
     ]
   });
   
-  console.log('Copy URL Below and get the code from there');
+  console.log('Copy URL Below and get the code from there\n');
   console.log(url);
   console.log('');
   
@@ -43,7 +43,9 @@ if (clientId && clientId.trim() !== '' && clientSecret && clientSecret.trim() !=
   const oauth2Client = new oauth2(clientId, clientSecret, 'http://localhost');  
   
   getAccessToken(oauth2Client, () => {
-    makeCSV(obj.root, oauth2Client, rl, filename);  
+    makeCSV(obj.root, oauth2Client, rl, filename, () => {
+      rl.close();
+    });  
   });
 } else {
   throw Error('Please get Google OAuth2 clientId and clientSecret and put it at api.json');

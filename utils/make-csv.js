@@ -3,7 +3,7 @@ const detection = require('./detection.js');
 const xmlSimpleCreator = require('./xml-creator.js');
 const googleApi = require('./google-api.js');
 
-const makeCSV = (original, oauth, rl, filename) => {
+const makeCSV = (original, oauth, rl, filename, next) => {
   var data = {};
   const stringifier = csvStringify({delimiter: ','});
   var output = '';
@@ -14,7 +14,6 @@ const makeCSV = (original, oauth, rl, filename) => {
   var polygonStringCount = 0;
   const maxPolygon = 4;
   const max = 500;
-  const maxTable = 10000;
   const headers = [];
   
   const getHeader = (f) => {
@@ -24,40 +23,46 @@ const makeCSV = (original, oauth, rl, filename) => {
     }
   };
   
+  const writePolygon = (polygonString) => {
+    var list = [];
+    for (var k in data) {
+      list.push(data[k]);
+    }
+    list.push(filename.split('.')[0].split(' ')[0]);
+    list.push(`<MultiGeometry>${polygonString}</MultiGeometry>`);
+    stringifier.write(list);
+    count++;
+    polygonCount++;
+    if (count > max) {
+      count = 0;
+      googleApi.uploadFiles(currentTableId, output);
+      output = '';
+    }
+  };
+  
   const getPolygon = (e) => {
     const polygon = xmlSimpleCreator(e);
-    polygonString += polygon;
-    polygonStringCount++;
-    if (polygonStringCount > maxPolygon) {
+    if (polygon.length > 1000000) {
       var list = [];
       for (var k in data) {
         list.push(data[k]);
       }
       list.push(filename.split('.')[0].split(' ')[0]);
-      list.push(`<MultiGeometry>${polygonString}</MultiGeometry>`);
-      if (list.length !== 5) console.log(list);
-      stringifier.write(list);
-      polygonString = '';
-      polygonStringCount = 0;
-      
-      count++;
-      polygonCount++;
-      if (count > max) {
-        count = 0;
-        // send data
-        googleApi.uploadFiles(currentTableId, output);
-        output = '';
+      console.log(polygon.length);
+      list.push(JSON.stringify(`<MultiGeometry>${polygonString}</MultiGeometry>`));
+      googleApi.uploadFiles(currentTableId, list.join(','));
+    } else {
+      polygonString += polygon;
+      polygonStringCount++;
+      if (polygonStringCount > maxPolygon) {
+        writePolygon(polygonString);
+        polygonString = '';
+        polygonStringCount = 0;
       }
-      // if (polygonCount > maxTable) {
-      //   polygonCount = 0;
-      //   if (!output.trim() === '') {
-      //     // send data
-      //     googleApi.uploadFiles(currentTableId, output);
-      //     output = '';
-      //   }
-      //   // create table
-      // }
     }
+    
+    
+    
   };
   
   stringifier.on('readable', () => {
@@ -67,16 +72,14 @@ const makeCSV = (original, oauth, rl, filename) => {
   });
   
   stringifier.on('error', function(err){
-    throw err;
+    next(err);
   });
   
   stringifier.on('finish', function(){
     googleApi.uploadFiles(currentTableId, output);
     googleApi.importRows(oauth, googleApi, rl, (err) => {
-      if (err) throw err;
-      rl.close();
+      next(err);
     });
-    // r1.close();
   });
   
   detection.gen(original, detection, [
@@ -94,18 +97,21 @@ const makeCSV = (original, oauth, rl, filename) => {
   
   // create Table
   googleApi.createTable(filename, headers, oauth, (err, tableId) => {
-    if (err) throw err;
-    currentTableId = tableId;
-    detection.gen(original, detection, [
-      getPolygon,
-      'polygon',
-      'multigeometry',
-      'placemark',
-      'folder',
-      'doc'
-    ]);
-    
-    stringifier.end();
+    if (err) {
+      next(err);
+    } else {
+      currentTableId = tableId;
+      detection.gen(original, detection, [
+        getPolygon,
+        'polygon',
+        'multigeometry',
+        'placemark',
+        'folder',
+        'doc'
+      ]);
+      
+      stringifier.end();
+    }
   });
 };
 

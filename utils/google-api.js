@@ -1,6 +1,5 @@
-const key = require('../api.json').key;
-const https = require('https');
 const google = require('googleapis');
+const fs = require('fs');
 const fusiontables = google.fusiontables('v2');
 const drive = google.drive('v3');
 const filesToUpload = [];
@@ -18,7 +17,7 @@ module.exports = {
     }
     
     const postData = {
-      name: name,
+      name: `${name}`,
       isExportable: true,
       columns: columns
     };
@@ -46,13 +45,16 @@ module.exports = {
     });
   },
   uploadFiles: (tableId, csv) => {
-    filesToUpload.push([tableId, csv]);
+    filesToUpload.push({
+      tableId: tableId, 
+      csv: csv
+    });
   },
   importRows: (oauth, self, rl, next) => {
     if (filesToUpload.length > 0) {
       var obj = filesToUpload.pop();
-      var tableId = obj[0];
-      var body = obj[1];
+      var tableId = obj.tableId;
+      var body = obj.csv;
       fusiontables.table.importRows({
         auth: oauth,
         tableId: tableId,
@@ -68,20 +70,25 @@ module.exports = {
             rl.write('-');
             setTimeout(() => {
               self.importRows(oauth, self, rl, next);
-            }, 1000);
-          } else if (err.message === "Content has a different number of columns than the table") {
+            }, 10000);
+          } else if (err.message.indexOf("Content has a different number of columns than the table") >= 0) {
             rl.write('\n');
-            console.log(obj);
+            rl.write(err.message);
+            fs.writeFileSync(`log-${tableId}-${filesToUpload.length}.csv`, obj.csv, 'utf8');
+            rl.write('\n');
             setTimeout(() => {
               self.importRows(oauth, self, rl, next);
-            }, 1000);
+            }, 10000);
           } else {
             console.log(err);
+            fs.writeFileSync(`log-${tableId}-${filesToUpload.length}-error.csv`, obj, 'utf8');
             next(err);
           }
         } else {
           rl.write('.');
-          self.importRows(oauth, self, rl, next);  
+          setTimeout(() => {
+            self.importRows(oauth, self, rl, next);
+          }, 5000);
         }
       });
     } else {

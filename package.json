@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "async": "^1.5.2",
     "csv-stringify": "^1.0.2",
     "googleapis": "^2.1.7",
     "xml-parser": "^1.2.1"
